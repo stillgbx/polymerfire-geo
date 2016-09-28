@@ -136,21 +136,6 @@ Polymer Web Component for Firebase GeoFire
         return path;
       },
 
-      /**
-       * @override
-       */
-      getStoredValue: function(path) {
-        return new Promise(function(resolve, reject) {
-          this.db.ref(path).once("value", function(snapshot) {
-            var value = snapshot.val();
-            if (value == null) {
-              resolve(this.zeroValue);
-            }
-            resolve(value);
-          }, this.__onError, this);
-        }.bind(this));
-      },
-
       ready: function(){
         this._init();
       },
