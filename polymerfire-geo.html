@@ -28,12 +28,18 @@ Polymer Web Component for Firebase GeoFire
       is: "polymerfire-geo",
 
       properties: {
+        /**
+         *
+         */
         geo: {
           type: Object,
           notify: true,
           computed: "_computeGeo(ref)"
         },
 
+        /**
+         *
+         */
         bounds: {
           type: Object
         },
@@ -50,12 +56,18 @@ Polymer Web Component for Firebase GeoFire
           computed: "_computeRadius(bounds)"
         },
 
+        /**
+         *
+         */
         bulkChanges: {
           type: Boolean,
           value: false,
           observer: "_bulkChangesChanged"
         },
 
+        /**
+         *
+         */
         processing: {
           type: Boolean,
           value: false,
@@ -93,15 +105,6 @@ Polymer Web Component for Firebase GeoFire
       reset: function() {
         this.path = null;
         return Promise.resolve();
-      },
-
-      /**
-       * @override
-       */
-      destroy: function() {
-        return this._setFirebaseValue(this.path, null).then(function() {
-          return this.reset();
-        }.bind(this));
       },
 
       /**
@@ -146,13 +149,6 @@ Polymer Web Component for Firebase GeoFire
             resolve(value);
           }, this.__onError, this);
         }.bind(this));
-      },
-
-      /**
-       * @override
-       */
-      setStoredValue: function(path, value) {
-        return this._setFirebaseValue(path, value);
       },
 
       ready: function(){
