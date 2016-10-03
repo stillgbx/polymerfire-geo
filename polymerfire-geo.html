@@ -229,18 +229,22 @@ Polymer Web Component for Firebase GeoFire
 
           // ready
           query.on("ready", function(){
-            if(this.bulkChanges){
-              this._debounceComplete("geoData");
+            if(this._changesHappened("geoData")){
+              this._resetChangesHappened("geoData");
             }
-
+            else{
+              this._bulkNoChange("geoData");
+            }
             this._setProcessing(false);
           }.bind(this));
 
           // key_entered
           query.on("key_entered", function(key, location, distance, customData){
-            if(this._keep(location)){
-              this._add(key, {"lat": location[0], "lng": location[1]});
+            var data = {"$key": key, "lat": location[0], "lng": location[1]};
+            for(var cdKey in customData){
+              data[cdKey] = customData[cdKey];
             }
+            this._add(key, data);
           }.bind(this));
 
           // key_exited
@@ -253,7 +257,7 @@ Polymer Web Component for Firebase GeoFire
           // key_moved
           query.on("key_moved", function(key, location, distance){
             if(this._keep(location)){
-              this._update(key, {"lat": location[0], "lng": location[1]}, false);
+              this._update(key, {"$key": key, "lat": location[0], "lng": location[1]}, false);
             }
             else{
               this._remove(key, false);

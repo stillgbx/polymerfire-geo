@@ -22,6 +22,7 @@ ToDo license
       _initChanges: function(id){
         this.set("_currentChanges." + id, {});
         this._resetCurrentChanges(id);
+        this._resetChangesHappened(id);
       },
 
       _deleteChanges: function(id){
@@ -35,6 +36,8 @@ ToDo license
         currentChanges.addedCount++;
         currentChanges.addedKeys.push(key);
 
+        currentChanges.happened = true;
+
         if(noDebounceComplete !== false){
           this._debounceComplete(id);
         }
@@ -46,6 +49,8 @@ ToDo license
         currentChanges.removedKeys.push(key);
         currentChanges.removedItems[key] = item;
 
+        currentChanges.happened = true;
+
         if(noDebounceComplete !== false){
           this._debounceComplete(id);
         }
@@ -56,18 +61,24 @@ ToDo license
         currentChanges.updatedCount++;
         currentChanges.updatedKeys.push(key);
 
+        currentChanges.happened = true;
+
         if(noDebounceComplete !== false){
           this._debounceComplete(id);
         }
       },
 
       _debounceComplete: function(id){
-        this.debounce("bulk-changes-complete-" + id, this._complete.bind(this, id));
+        this.debounce("bulk-changes-complete-" + id, this._bulkComplete.bind(this, id));
       },
 
-      _complete: function(id){
+      _bulkComplete: function(id){
         this.fire("bulk-changes-complete", {id: id, changes: this._currentChanges[id]}, {bubbles: false, cancelable: true});
         this._resetCurrentChanges(id);
+      },
+
+      _bulkNoChange: function(id){
+        this.fire("bulk-changes-no-change", {id: id}, {bubbles: false, cancelable: true});
       },
 
       _resetCurrentChanges: function(id){
@@ -95,6 +106,22 @@ ToDo license
         }
 
         return true;
+      },
+
+      _changesHappened: function(id){
+        if(!this._currentChanges.hasOwnProperty(id)){
+          return false;
+        }
+
+        return this._currentChanges[id].happened;
+      },
+
+      _resetChangesHappened: function(id){
+        if(!this._currentChanges.hasOwnProperty(id)){
+          return;
+        }
+
+        this._currentChanges[id].happened = false;
       },
 
       _importChanges: function(id, changes, targetData, sourceData){
