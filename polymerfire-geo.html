@@ -184,7 +184,7 @@ Polymer Web Component for Firebase GeoFire
       },
 
       _queryParamChanged: function(geo, center, radius){
-        if(this.disabled || !geo || !center){
+        if(this.disabled || !geo){
           return;
         }
 
@@ -216,7 +216,8 @@ Polymer Web Component for Firebase GeoFire
       },
 
       _buildQuery: function(geo, center, radius){
-        if(this.disabled || !geo){
+        if(this.disabled || !geo || !center){
+          this._init();
           return;
         }
 
