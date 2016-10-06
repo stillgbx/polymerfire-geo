@@ -44,13 +44,31 @@ Polymer Web Component for Firebase GeoFire
           type: Object
         },
 
+        /**
+         *
+         */
+        _geoDataId: {
+          type: String,
+          value: "geoData",
+          readOnly: true
+        },
+
+        /**
+         *
+         */
         _query: Object,
 
+        /**
+         *
+         */
         _center: {
           type: Object,
           computed: "_computeCenter(bounds)"
         },
 
+        /**
+         *
+         */
         _radius: {
           type: Number,
           computed: "_computeRadius(bounds)"
@@ -73,7 +91,26 @@ Polymer Web Component for Firebase GeoFire
           value: false,
           readOnly: true,
           notify: true
-        }
+        },
+
+        /**
+         *
+         */
+         boundsOnly: {
+           type: Boolean,
+           value: false,
+           observer: "_boundsOnlyChanged"
+         },
+
+         /**
+          *
+          */
+         _rejectedData: {
+           type: Object,
+           value: function(){
+             return {};
+           }
+         }
       },
 
       behaviors: [
@@ -145,6 +182,7 @@ Polymer Web Component for Firebase GeoFire
       },
 
       _init: function(){
+        this._resetQuery();
         this.data = this.zeroValue;
       },
 
@@ -176,10 +214,10 @@ Polymer Web Component for Firebase GeoFire
 
       _bulkChangesChanged: function(newValue, oldValue){
         if(newValue){
-          this._initChanges("geoData");
+          this._initChanges(this._geoDataId);
         }
         else{
-          this._deleteChanges("geoData");
+          this._deleteChanges(this._geoDataId);
         }
       },
 
@@ -189,6 +227,12 @@ Polymer Web Component for Firebase GeoFire
         }
 
         this.debounce("build-query", this._buildQuery.bind(this, geo, center, radius));
+      },
+
+      _boundsOnlyChanged: function(newValue, oldValue){
+        if(oldValue && !newValue){
+          this._checkRejectedData();
+        }
       },
 
       _getBoundsCenter: function(bounds){
@@ -212,7 +256,9 @@ Polymer Web Component for Firebase GeoFire
           return 0;
         }
 
-        return GeoFire.distance([bounds.northEast.lat, bounds.northEast.lng], [bounds.southWest.lat, bounds.southWest.lng]) / 2;
+        var radius = GeoFire.distance([bounds.northEast.lat, bounds.northEast.lng], [bounds.southWest.lat, bounds.southWest.lng]) / 2;
+        // 5985km seems to be the max working radius...
+        return Math.min(5985, radius);
       },
 
       _buildQuery: function(geo, center, radius){
@@ -230,11 +276,11 @@ Polymer Web Component for Firebase GeoFire
 
           // ready
           query.on("ready", function(){
-            if(this._changesHappened("geoData")){
-              this._resetChangesHappened("geoData");
+            if(this._changesHappened(this._geoDataId)){
+              this._resetChangesHappened(this._geoDataId);
             }
             else{
-              this._bulkNoChange("geoData");
+              this._bulkNoChange(this._geoDataId);
             }
             this._setProcessing(false);
           }.bind(this));
@@ -245,50 +291,72 @@ Polymer Web Component for Firebase GeoFire
             for(var cdKey in customData){
               data[cdKey] = customData[cdKey];
             }
-            this._add(key, data);
+            if(this._keep(location)){
+              this._add(key, data);
+            }
+            else{
+              this._addRejected(key, data);
+            }
           }.bind(this));
 
           // key_exited
           query.on("key_exited", function(key, location, distance){
-            if(this.data.hasOwnProperty(key)){
+            if(this._isAcceptedData(key)){
               this._remove(key);
+            }
+            else if(this._isRejectedData(key)){
+              this._removeRejected(key);
             }
           }.bind(this));
 
           // key_moved
           query.on("key_moved", function(key, location, distance){
             if(this._keep(location)){
-              this._update(key, {"$key": key, "lat": location[0], "lng": location[1]}, false);
+              if(this._isAcceptedData(key)){
+                this._update(key, {"$key": key, "lat": location[0], "lng": location[1]}, false);
+              }
+              else{
+                this._acceptData(key);
+              }
             }
             else{
-              this._remove(key, false);
+              if(this._isAcceptedData(key)){
+                this._remove(key, false);
+              }
+              else{
+                this._removeRejected(key);
+              }
             }
 
             if(this.bulkChanges){
-              this._debounceComplete("geoData");
+              this._debounceComplete(this._geoDataId);
             }
-
           }.bind(this));
         }
         else{
           query.updateCriteria({center: [center.lat, center.lng], radius: radius});
+          this._checkRejectedData();
         }
       },
 
       _add: function(key, data, noDebounceComplete){
         if(this.bulkChanges){
           this.data[key] = data;
-          this._changesAdd("geoData", key, noDebounceComplete);
+          this._changesAdd(this._geoDataId, key, noDebounceComplete);
         }
         else{
           this.set("data." + key, data);
         }
       },
 
+      _addRejected: function(key, data){
+        this.set("_rejectedData." + key, data);
+      },
+
       _update: function(key, data, noDebounceComplete){
         if(this.bulkChanges){
           this.data[key] = {"lat": location[0], "lng": location[1]};
-          this._changesUpdate("geoData", key, noDebounceComplete);
+          this._changesUpdate(this._geoDataId, key, noDebounceComplete);
         }
         else{
           this.set("data." + key, {"lat": location[0], "lng": location[1]});
@@ -299,12 +367,41 @@ Polymer Web Component for Firebase GeoFire
         if(this.bulkChanges){
           var data = this.data[key];
           delete this.data[key];
-          this._changesRemove("geoData", key, data, noDebounceComplete);
+          this._changesRemove(this._geoDataId, key, data, noDebounceComplete);
         }
         else{
           this.set("data." + key, null);
           delete this.data[key];
         }
+      },
+
+      _removeRejected: function(key){
+        this.set("_rejectedData." + key, null);
+        delete this._rejectedData[key];
+      },
+
+      _isAcceptedData: function(key){
+        return this.data.hasOwnProperty(key);
+      },
+
+      _isRejectedData: function(key){
+        return this._rejectedData.hasOwnProperty(key);
+      },
+
+      _checkRejectedData: function(){
+        var rejectedData = null;
+        for(var key in this._rejectedData){
+          rejectedData = this._rejectedData[key];
+          if(this._keep([rejectedData.lat, rejectedData.lng])){
+            this._acceptData(key);
+          }
+        }
+      },
+
+      _acceptData: function(key){
+        var rejectedData = this._rejectedData[key];
+        this._removeRejected(key);
+        this._add(key, rejectedData);
       },
 
       _resetQuery: function(){
@@ -315,6 +412,9 @@ Polymer Web Component for Firebase GeoFire
       },
 
       _keep: function(location){
+        if(!this.boundsOnly){
+          return true;
+        }
         return this._isLocationBounds(location);
       },
 
