@@ -8,156 +8,158 @@ license that can be found in the LICENSE file
 <link rel="import" href="../polymer/polymer.html">
 
 <script>
-    BulkChangesBehavior = {
+  window.AppBehaviors = window.AppBehaviors || {};
 
-      properties: {
+  AppBehaviors.BulkChangesBehavior = {
 
-        _currentChanges: {
-          type: Object,
-          value: function(){
-            return {};
-          }
+    properties: {
+
+      _currentChanges: {
+        type: Object,
+        value: function(){
+          return {};
         }
+      }
 
-      },
+    },
 
-      _initChanges: function(id){
-        this.set("_currentChanges." + id, {});
-        this._resetCurrentChanges(id);
-        this._resetChangesHappened(id);
-      },
+    _initChanges: function(id){
+      this.set("_currentChanges." + id, {});
+      this._resetCurrentChanges(id);
+      this._resetChangesHappened(id);
+    },
 
-      _deleteChanges: function(id){
-        if(this._currentChanges.hasOwnProperty(id)){
-          delete this._currentChanges[id];
-        }
-      },
+    _deleteChanges: function(id){
+      if(this._currentChanges.hasOwnProperty(id)){
+        delete this._currentChanges[id];
+      }
+    },
 
-      _changesAdd: function(id, key, noDebounceComplete){
-        var currentChanges = this._currentChanges[id];
-        currentChanges.addedCount++;
-        currentChanges.addedKeys.push(key);
+    _changesAdd: function(id, key, noDebounceComplete){
+      var currentChanges = this._currentChanges[id];
+      currentChanges.addedCount++;
+      currentChanges.addedKeys.push(key);
 
-        currentChanges.happened = true;
+      currentChanges.happened = true;
 
-        if(noDebounceComplete !== false){
-          this._debounceComplete(id);
-        }
-      },
-
-      _changesRemove: function(id, key, item, noDebounceComplete){
-        var currentChanges = this._currentChanges[id];
-        currentChanges.removedCount++;
-        currentChanges.removedKeys.push(key);
-        currentChanges.removedItems[key] = item;
-
-        currentChanges.happened = true;
-
-        if(noDebounceComplete !== false){
-          this._debounceComplete(id);
-        }
-      },
-
-      _changesUpdate: function(id, key, noDebounceComplete){
-        var currentChanges = this._currentChanges[id];
-        currentChanges.updatedCount++;
-        currentChanges.updatedKeys.push(key);
-
-        currentChanges.happened = true;
-
-        if(noDebounceComplete !== false){
-          this._debounceComplete(id);
-        }
-      },
-
-      _debounceComplete: function(id){
-        this.debounce("bulk-changes-complete-" + id, this._bulkComplete.bind(this, id));
-      },
-
-      _bulkComplete: function(id){
-        this.fire("bulk-changes-complete", {id: id, changes: this._currentChanges[id]}, {bubbles: false, cancelable: true});
-        this._resetCurrentChanges(id);
-      },
-
-      _bulkNoChange: function(id){
-        this.fire("bulk-changes-no-change", {id: id}, {bubbles: false, cancelable: true});
-      },
-
-      _resetCurrentChanges: function(id){
-        if(!this._currentChanges.hasOwnProperty(id)){
-          return;
-        }
-
-        var currentChanges = this._currentChanges[id];
-        currentChanges.addedCount = 0;
-        currentChanges.addedKeys = [];
-        currentChanges.removedCount = 0;
-        currentChanges.removedKeys = [];
-        currentChanges.removedItems = {};
-        currentChanges.updatedCount = 0;
-        currentChanges.updatedKeys = [];
-      },
-
-      _hasChanges: function(changes){
-        if(typeof changes == String){
-          changes = this._currentChanges[changes];
-        }
-
-        if(changes.addedCount == 0 && changes.removedCount == 0 && changes.updatedCount == 0){
-          return false;
-        }
-
-        return true;
-      },
-
-      _changesHappened: function(id){
-        if(!this._currentChanges.hasOwnProperty(id)){
-          return false;
-        }
-
-        return this._currentChanges[id].happened;
-      },
-
-      _resetChangesHappened: function(id){
-        if(!this._currentChanges.hasOwnProperty(id)){
-          return;
-        }
-
-        this._currentChanges[id].happened = false;
-      },
-
-      _importChanges: function(id, changes, targetData, sourceData){
-        if(changes.addedCount > 0){
-          var key = null;
-          for(var i = 0, iMax = changes.addedKeys.length; i < iMax; i++){
-            key = changes.addedKeys[i];
-            if(sourceData && targetData){
-              targetData[key] = sourceData[key];
-              targetData[key].$key = key;
-            }
-            this._changesAdd(id, key, false);
-          }
-        }
-
-        if(changes.removedCount > 0){
-          var key = null;
-          var item = null;
-          for(var i = 0, iMax = changes.removedKeys.length; i < iMax; i++){
-            key = changes.removedKeys[i];
-            item = changes.removedItems[key];
-            if(targetData){
-              targetData[key] = null;
-              delete targetData[key];
-            }
-            this._changesRemove(id, key, item, false);
-          }
-        }
-
-        if(changes.updatedCount > 0){
-          // ToDo
-        }
-
+      if(noDebounceComplete !== false){
         this._debounceComplete(id);
       }
-    };
+    },
+
+    _changesRemove: function(id, key, item, noDebounceComplete){
+      var currentChanges = this._currentChanges[id];
+      currentChanges.removedCount++;
+      currentChanges.removedKeys.push(key);
+      currentChanges.removedItems[key] = item;
+
+      currentChanges.happened = true;
+
+      if(noDebounceComplete !== false){
+        this._debounceComplete(id);
+      }
+    },
+
+    _changesUpdate: function(id, key, noDebounceComplete){
+      var currentChanges = this._currentChanges[id];
+      currentChanges.updatedCount++;
+      currentChanges.updatedKeys.push(key);
+
+      currentChanges.happened = true;
+
+      if(noDebounceComplete !== false){
+        this._debounceComplete(id);
+      }
+    },
+
+    _debounceComplete: function(id){
+      this.debounce("bulk-changes-complete-" + id, this._bulkComplete.bind(this, id));
+    },
+
+    _bulkComplete: function(id){
+      this.fire("bulk-changes-complete", {id: id, changes: this._currentChanges[id]}, {bubbles: false, cancelable: true});
+      this._resetCurrentChanges(id);
+    },
+
+    _bulkNoChange: function(id){
+      this.fire("bulk-changes-no-change", {id: id}, {bubbles: false, cancelable: true});
+    },
+
+    _resetCurrentChanges: function(id){
+      if(!this._currentChanges.hasOwnProperty(id)){
+        return;
+      }
+
+      var currentChanges = this._currentChanges[id];
+      currentChanges.addedCount = 0;
+      currentChanges.addedKeys = [];
+      currentChanges.removedCount = 0;
+      currentChanges.removedKeys = [];
+      currentChanges.removedItems = {};
+      currentChanges.updatedCount = 0;
+      currentChanges.updatedKeys = [];
+    },
+
+    _hasChanges: function(changes){
+      if(typeof changes == String){
+        changes = this._currentChanges[changes];
+      }
+
+      if(changes.addedCount == 0 && changes.removedCount == 0 && changes.updatedCount == 0){
+        return false;
+      }
+
+      return true;
+    },
+
+    _changesHappened: function(id){
+      if(!this._currentChanges.hasOwnProperty(id)){
+        return false;
+      }
+
+      return this._currentChanges[id].happened;
+    },
+
+    _resetChangesHappened: function(id){
+      if(!this._currentChanges.hasOwnProperty(id)){
+        return;
+      }
+
+      this._currentChanges[id].happened = false;
+    },
+
+    _importChanges: function(id, changes, targetData, sourceData){
+      if(changes.addedCount > 0){
+        var key = null;
+        for(var i = 0, iMax = changes.addedKeys.length; i < iMax; i++){
+          key = changes.addedKeys[i];
+          if(sourceData && targetData){
+            targetData[key] = sourceData[key];
+            targetData[key].$key = key;
+          }
+          this._changesAdd(id, key, false);
+        }
+      }
+
+      if(changes.removedCount > 0){
+        var key = null;
+        var item = null;
+        for(var i = 0, iMax = changes.removedKeys.length; i < iMax; i++){
+          key = changes.removedKeys[i];
+          item = changes.removedItems[key];
+          if(targetData){
+            targetData[key] = null;
+            delete targetData[key];
+          }
+          this._changesRemove(id, key, item, false);
+        }
+      }
+
+      if(changes.updatedCount > 0){
+        // ToDo
+      }
+
+      this._debounceComplete(id);
+    }
+  };
 </script>
