@@ -42,9 +42,30 @@ Polymer Web Component for Firebase GeoFire
         /**
          *
          */
-        bounds: {
-          type: Object
-        },
+         bounds: {
+           type: Object,
+           value: function(){
+             return null;
+           }
+         },
+
+         /**
+          *
+          */
+         center: {
+           type: Object,
+           value: function(){
+             return null;
+           }
+         },
+
+         /**
+          *
+          */
+         radius: {
+           type: Number,
+           value: 0
+         },
 
         /**
          *
@@ -65,7 +86,7 @@ Polymer Web Component for Firebase GeoFire
          */
         _center: {
           type: Object,
-          computed: "_computeCenter(bounds)"
+          computed: "_computeCenter(center, bounds)"
         },
 
         /**
@@ -73,7 +94,7 @@ Polymer Web Component for Firebase GeoFire
          */
         _radius: {
           type: Number,
-          computed: "_computeRadius(bounds)"
+          computed: "_computeRadius(radius, bounds)"
         },
 
         /**
@@ -198,7 +219,11 @@ Polymer Web Component for Firebase GeoFire
         return new GeoFire(ref);
       },
 
-      _computeCenter: function(bounds){
+      _computeCenter: function(center, bounds){
+        if(center){
+          return center;
+        }
+
         if(!bounds){
           return null;
         }
@@ -206,7 +231,11 @@ Polymer Web Component for Firebase GeoFire
         return this._getBoundsCenter(bounds);
       },
 
-      _computeRadius: function(bounds){
+      _computeRadius: function(radius, bounds){
+        if(radis > 0){
+          return radius;
+        }
+
         if(!bounds){
           return 0;
         }
@@ -289,7 +318,7 @@ Polymer Web Component for Firebase GeoFire
 
           // key_entered
           query.on("key_entered", function(key, location, distance, customData){
-            var data = {"$key": key, "lat": location[0], "lng": location[1]};
+            var data = {"$key": key, "lat": location[0], "lng": location[1], "distance": distance};
             for(var cdKey in customData){
               data[cdKey] = customData[cdKey];
             }
@@ -315,7 +344,7 @@ Polymer Web Component for Firebase GeoFire
           query.on("key_moved", function(key, location, distance){
             if(this._keep(location)){
               if(this._isAcceptedData(key)){
-                this._update(key, {"$key": key, "lat": location[0], "lng": location[1]}, false);
+                this._update(key, {"$key": key, "lat": location[0], "lng": location[1], "distance": distance}, false);
               }
               else{
                 this._acceptData(key);
@@ -357,11 +386,11 @@ Polymer Web Component for Firebase GeoFire
 
       _update: function(key, data, noDebounceComplete){
         if(this.bulkChanges){
-          this.data[key] = {"lat": location[0], "lng": location[1]};
+          this.data[key] = {"lat": data.lat, "lng": data.lng, "distance": data.distance};
           this._changesUpdate(this._geoDataId, key, noDebounceComplete);
         }
         else{
-          this.set("data." + key, {"lat": location[0], "lng": location[1]});
+          this.set("data." + key, {"lat": data.lat, "lng": data.lng, "distance": data.distance});
         }
       },
 
