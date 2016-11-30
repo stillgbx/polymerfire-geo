@@ -2,28 +2,28 @@
 
 <html>
   <head>
-    <title>polymerfire-geo test</title>
+    <title>polymerfire-geo-query test</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
     <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
     <script src="../../web-component-tester/browser.js"></script>
 
-    <link rel="import" href="../polymerfire-geo.html">
+    <link rel="import" href="../polymerfire-geo-query.html">
   </head>
   <body>
 
     <test-fixture id="basic">
       <template>
-        <polymerfire-geo></polymerfire-geo>
+        <polymerfire-geo-query></polymerfire-geo-query>
       </template>
     </test-fixture>
 
     <script>
-      suite('polymerfire-geo', function() {
+      suite('polymerfire-geo-query', function() {
 
         test('instantiating the element works', function() {
           var element = fixture('basic');
-          assert.equal(element.is, 'polymerfire-geo');
+          assert.equal(element.is, 'polymerfire-geo-query');
         });
 
       });
