@@ -1,0 +1,234 @@
+<!--
+@license
+Copyright (c) 2016 Code 101 SASU. All rights reserved.
+ToDo license
+-->
+<!-- Polymer elements -->
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+<!-- Firebase elements -->
+<link rel="import" href="../../bower_components/polymerfire/firebase-database-behavior.html">
+<!-- Geofire -->
+<link rel="import" href="geofire.html">
+
+<dom-module id="polymerfire-geo">
+  <script>
+    "use strict";
+
+    Polymer({
+      is: "polymerfire-geo",
+
+      behaviors: [
+        Polymer.FirebaseDatabaseBehavior
+      ],
+
+      properties: {
+        geo: {
+          type: Object,
+          notify: true,
+          computed: "_computeGeo(ref)"
+        }
+      },
+
+      attached: function(){
+        this.__refChanged(this.ref, this.ref);
+      },
+
+      detached: function(){
+        if(this.ref){
+          this.ref.off("value", this.__onFirebaseValue, this);
+        }
+      },
+
+      /**
+       * @override
+       */
+      get isNew() {
+        return this.disabled || !this.__pathReady(this.path);
+      },
+
+      /**
+       * @override
+       */
+      get zeroValue() {
+        return {};
+      },
+
+      /**
+       * @override
+       */
+      save: function(parentPath, key, data, updatePath){
+        return Promise.resolve({parentPath: parentPath, key: key, data: data, updatePath: updatePath || true}).then(
+          function(result){
+            if(!result.parentPath || result.parentPath == ""){
+              throw new Error("No parent path provided to save data.");
+            }
+            if(!result.key || result.key == ""){
+              throw new Error("No key provided to save data.");
+            }
+
+            var ref = this.db.ref(parentPath);
+            var geo = new GeoFire(ref);
+            return geo.set(result.key, [result.data.l[0], result.data.l[1]], this._getCustomData(result.data));
+          }.bind(this)
+        ).then(
+          function(result){
+            if(result.updatePath){
+              this.path = result.parentPath + "/" + result.key
+            }
+            return Promise.resolve(result);
+          }.bind(this, {parentPath: parentPath, key: key, updatePath: updatePath})
+        ).catch(
+          function(error){
+            throw error;
+          }
+        );
+      },
+
+      _getCustomData: function(data){
+        var customData = null;
+
+        if(data){
+          var keys = Object.keys(data);
+          var key = null;
+          for(var i = 0, iMax = keys.length; i < iMax; i++){
+            key = keys[i];
+            if(key === "g" || key === "l"){
+              continue;
+            }
+
+            if(!customData){
+              customData = {};
+            }
+            customData[key] = data[key];
+          }
+        }
+
+        return customData;
+      },
+
+      /**
+       * @override
+       */
+      reset: function(){
+        this.path = null;
+        return Promise.resolve();
+      },
+
+      /**
+       * @override
+       */
+      destroy: function(){
+        // ToDo
+      },
+
+      /**
+       * @override
+       */
+      memoryPathToStoragePath: function(path){
+        var storagePath = this.path;
+
+        if(path !== "data"){
+          storagePath += path.replace(/^data\.?/, "/").split(".").join("/");
+        }
+
+        return storagePath;
+      },
+
+      /**
+       * @override
+       */
+      storagePathToMemoryPath: function(storagePath){
+        var path = "data";
+
+        storagePath =
+            storagePath.replace(this.path, "").split("/").join(".");
+
+        if(storagePath){
+          path += "." + storagePath;
+        }
+
+        return path;
+      },
+
+      /**
+       * @override
+       */
+      getStoredValue: function(storagePath){
+        return Promise.resolve().then(
+          function(storagePath){
+            var paths = storagePath.match(/.*\/([^\/]*)/);
+            if(paths && paths.length == 2 && paths[1] && paths[1] != ""){
+              return this.geo.get(paths[1]);
+            }
+            throw new Error("No key found to get value.");
+          }.bind(this, storagePath)
+        ).catch(function(error){
+          throw error;
+        });
+      },
+
+      /**
+       * @override
+       */
+      setStoredValue: function(storagePath, value){
+        return Promise.resolve().then(
+          function(storagePath, value){
+            var paths = storagePath.match(/.*\/([^\/]*)/);
+            if(paths && paths.length == 2 && paths[1] && paths[1] != ""){
+              return this.geo.set(paths[1], [value.l[0], value.l[1]]);
+            }
+            throw new Error("No key found to store value.");
+          }.bind(this, storagePath, value)
+        ).catch(function(error){
+          throw error;
+        });
+      },
+
+      __refChanged: function(ref, oldRef){
+        if(oldRef){
+          oldRef.off("value", this.__onFirebaseValue, this);
+        }
+
+        if(ref){
+          ref.on("value", this.__onFirebaseValue, this.__onError, this);
+        }
+      },
+
+      __onFirebaseValue: function(snapshot){
+        var value = snapshot.val();
+
+        if(value == null){
+          value = this.zeroValue;
+        }
+
+        if(!this.new){
+          this.async(function(){
+            this.syncToMemory(function(){
+              delete value.g;
+              this._log("Updating data from Firebase value: ", value);
+              this.set("data", value);
+            });
+          });
+        }
+      },
+
+      ready: function(){
+        this._init();
+      },
+
+      _init: function(){
+        this.data = this.zeroValue;
+      },
+
+      _computeGeo: function(ref){
+        if(!ref){
+          return null;
+        }
+
+        return new GeoFire(ref.parent);
+      }
+    });
+
+  </script>
+
+</dom-module>
