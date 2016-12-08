@@ -24,7 +24,7 @@ license that can be found in the LICENSE file
     },
 
     _initChanges: function(id){
-      this.set("_currentChanges." + id, {});
+      this._currentChanges[id] = {};
       this._resetCurrentChanges(id);
       this._resetChangesHappened(id);
     },
